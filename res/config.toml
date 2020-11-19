@@ -1,0 +1,13 @@
+# config_path = "/etc/gitpack.conf" Hardcoded
+config_dir = "/etc/gitpack.d/"
+# cache_dir = "/var/cache/gitpack"
+cache_dir = "/tmp/gitpack" # Debug
+temp_dir = "/tmp/"
+
+color = true
+sources = [
+    "https://github.com/",
+    "https://gitlab.com/",
+    "https://bitbucket.org/",
+    "https://codeberg.org/"
+]
