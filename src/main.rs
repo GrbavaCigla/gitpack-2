@@ -3,6 +3,8 @@ use git2::Repository;
 use structopt::StructOpt;
 use std::path::PathBuf;
 
+mod db;
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "gitpack", about = "Gitpack v2, written in rust instead of C, package manager.")]
 enum Gitpack {
