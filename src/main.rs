@@ -13,6 +13,8 @@ enum Gitpack {
         #[structopt(help = "Package to install")]
         package: String
     },
+    #[structopt(name = "update")]
+    Update {},
 }
 
 fn checkout_latest(repo: Repository) {
@@ -63,6 +65,7 @@ fn install(package: &str, sources: &Vec<config::Value>, cache_dir: &str, master:
                 checkout_latest(repo);
             }
 
+
             break;
         }
     }
@@ -73,6 +76,7 @@ fn main(){
 
     let mut settings = config::Config::default();
 
+
     settings.merge(config::File::with_name("/etc/gitpack.toml"))
             .expect("There is no config file at /etc/gitpack.toml.");
 
@@ -80,11 +84,18 @@ fn main(){
         .get_array("sources")
         .expect("There is no sources in config or sources is not an array.");
 
+    let db_path = settings
+        .get_str("db_path")
+        .expect("There is no db_path in config or db_path is not a string.");
+
     let cache_dir = settings
         .get_str("cache_dir")
         .expect("There is no cache_dir in config or cache_dir is not a string");
 
+    let package_db = db::PackageDB::new(PathBuf::from(db_path));
+
     match opt {
         Gitpack::Install { package } => install(&package, &sources, &cache_dir, true),
+        Gitpack::Update { } => (),
     }
 }

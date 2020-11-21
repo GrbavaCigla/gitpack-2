@@ -1,5 +1,5 @@
 # config_path = "/etc/gitpack.conf" Hardcoded
-config_dir = "/etc/gitpack.d/"
+db_path = "/etc/gitpack.d/packages.db"
 # cache_dir = "/var/cache/gitpack"
 cache_dir = "/tmp/gitpack" # Debug
 temp_dir = "/tmp/"

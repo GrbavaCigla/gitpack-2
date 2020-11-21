@@ -1,13 +1,20 @@
 extern crate rusqlite;
 
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, params, NO_PARAMS, Row};
 use std::path::PathBuf;
-use std::result::Result;
+use std::option::Option;
 
 #[derive(Debug)]
-struct PackageDB {
+pub struct PackageDB {
     path: PathBuf,
     conn: Connection
+}
+
+#[derive(Debug)]
+pub struct Package {
+    pub name: String,
+    pub url: String,
+    pub version: String,
 }
 
 impl PackageDB {
@@ -24,31 +31,42 @@ impl PackageDB {
     pub fn create_db(&self) {
         let _ = self.conn.execute("CREATE TABLE IF NOT EXISTS Packages (\
             id INTEGER PRIMARY KEY AUTOINCREMENT, \
-            name TEXT,\
-            version TEXT,\
-            );", params![]);
+            name TEXT, \
+            url TEXT UNIQUE, \
+            version TEXT \
+            );", params![]).unwrap();
     }
 
-    pub fn add(&self, name: &String, version: &String) {
+    pub fn add(&self, pkg: &Package) {
         let _ = self.conn.execute("INSERT INTO Packages \
-            (name, version) VALUES (?,?)", params![name, version]);
+            (name, url, version) VALUES (?,?,?)", params![pkg.name, pkg.url, pkg.version])
+            .expect("Failed to add package into the database");
+        
     }
 
-    pub fn get(&self, name: &String) -> String {
-        let versions_prep = self.conn
-            .prepare("SELECT version FROM Packages")
+    pub fn get(&self, _name: &String) -> Option<Package> {
+        let mut pkg_prep = self.conn
+            .prepare("SELECT name, url, version FROM Packages;")
             .expect("Failed to fetch data from database");
         
-        let version_iter = versions_prep
-            .query_map(params![], |row| {
-                Ok(row.get_unwrap(0))
-            })
-            .expect("Failed to fetch data from database");
-        
-        for version in version_iter {
-            let _ = version.unwrap();
-        };
+        let pkg_iter = pkg_prep.query_map(params![],
+            |row| {
+                Ok(
+                    Package{
+                        name: row.get(0)?,
+                        url: row.get(0)?,
+                        version: row.get(0)?
+                    }
+                )
+            }
+        ).unwrap();
 
-        String::new()
+        let mut b: Option<Package> = None;
+        for package in pkg_iter {
+            b = Some(package.expect("Failed to fetch data from database"));
+            break;
+        }
+        
+        return b;
     }
 }
