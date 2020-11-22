@@ -1,6 +1,6 @@
 extern crate rusqlite;
 
-use rusqlite::{Connection, params, NO_PARAMS, Row};
+use rusqlite::{Connection, params, NO_PARAMS};
 use std::path::PathBuf;
 use std::option::Option;
 
@@ -34,7 +34,7 @@ impl PackageDB {
             name TEXT, \
             url TEXT UNIQUE, \
             version TEXT \
-            );", params![]).unwrap();
+            );", NO_PARAMS).unwrap();
     }
 
     pub fn add(&self, pkg: &Package) {
