@@ -41,21 +41,20 @@ impl PackageDB {
         let _ = self.conn.execute("INSERT INTO Packages \
             (name, url, version) VALUES (?,?,?)", params![pkg.name, pkg.url, pkg.version])
             .expect("Failed to add package into the database");
-        
     }
 
-    pub fn get(&self, _name: &String) -> Option<Package> {
+    pub fn get(&self, _name: &str) -> Option<Package> {
         let mut pkg_prep = self.conn
-            .prepare("SELECT name, url, version FROM Packages;")
+            .prepare("SELECT name, url, version FROM Packages WHERE name=?;")
             .expect("Failed to fetch data from database");
         
-        let pkg_iter = pkg_prep.query_map(params![],
+        let pkg_iter = pkg_prep.query_map(params![_name],
             |row| {
                 Ok(
                     Package{
                         name: row.get(0)?,
-                        url: row.get(0)?,
-                        version: row.get(0)?
+                        url: row.get(1)?,
+                        version: row.get(2)?
                     }
                 )
             }

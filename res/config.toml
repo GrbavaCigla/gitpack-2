@@ -1,7 +1,11 @@
 # config_path = "/etc/gitpack.conf" Hardcoded
-db_path = "/etc/gitpack.d/packages.db"
+
+# db_path = "/etc/gitpack.d/packages.db"
+db_path = "/tmp/gitpack.db" # Debug
+
 # cache_dir = "/var/cache/gitpack"
 cache_dir = "/tmp/gitpack" # Debug
+
 temp_dir = "/tmp/"
 
 color = true
