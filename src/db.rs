@@ -43,12 +43,12 @@ impl PackageDB {
             .expect("Failed to add package into the database");
     }
 
-    pub fn get(&self, _name: &str) -> Option<Package> {
+    pub fn get(&self, name: &str) -> Option<Package> {
         let mut pkg_prep = self.conn
             .prepare("SELECT name, url, version FROM Packages WHERE name=?;")
             .expect("Failed to fetch data from database");
         
-        let pkg_iter = pkg_prep.query_map(params![_name],
+        let pkg_iter = pkg_prep.query_map(params![name],
             |row| {
                 Ok(
                     Package{
@@ -60,12 +60,12 @@ impl PackageDB {
             }
         ).unwrap();
 
-        let mut b: Option<Package> = None;
+        let mut pkg: Option<Package> = None;
         for package in pkg_iter {
-            b = Some(package.expect("Failed to fetch data from database"));
+            pkg = Some(package.expect("Failed to fetch data from database"));
             break;
         }
         
-        return b;
+        return pkg;
     }
 }

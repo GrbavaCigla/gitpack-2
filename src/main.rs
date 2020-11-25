@@ -54,21 +54,29 @@ fn checkout_latest(repo: Repository) -> Option<String>{
 }
 
 fn install(package_name: &str, sources: &Vec<config::Value>, cache_dir: &str, database: &db::PackageDB, master: bool) {
+    let mut found_repo = false;
+
     for source in sources{
         let temp_url = format!("{}{}", source, package_name);
         let res = reqwest::blocking::get(&temp_url).unwrap();
 
         if res.status() == 200 {
-            println!("{}", temp_url);
+            found_repo = true;
+            println!("[:] Found the repository at {}", temp_url);
 
             let mut path = PathBuf::from(cache_dir);
             path.push(package_name);
 
-            let repo = match Repository::clone(&temp_url, &path) {
+            let repo = match Repository::clone_recurse(&temp_url, &path) {
                 Ok(repo) => repo,
                 Err(e) => match e.code() {
-                    git2::ErrorCode::Exists => Repository::open(&path).unwrap(),
-                    _ => panic!("failed to clone: {}", e)
+                    git2::ErrorCode::Exists => {
+                        Repository::open(&path).unwrap()
+                    },
+                    _ => {
+                        eprintln!("[!] Failed to clone the repository");
+                        std::process::exit(1);
+                    }
                 },
             };
 
@@ -82,7 +90,9 @@ fn install(package_name: &str, sources: &Vec<config::Value>, cache_dir: &str, da
                 None => String::from("master")
             };
 
-            let db_package = match database.get(package_name) {
+            println!("[:] Installing version {}", version);
+
+            let _db_package = match database.get(package_name) {
                 Some(package) => package,
                 None => {
                     let pkg = db::Package{
@@ -97,6 +107,9 @@ fn install(package_name: &str, sources: &Vec<config::Value>, cache_dir: &str, da
 
             break;
         }
+    }
+    if !found_repo {
+        eprintln!("[!] Failed to fetch the repository :(");
     }
 }
 
