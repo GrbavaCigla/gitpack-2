@@ -11,7 +11,10 @@ enum Gitpack {
     #[structopt(name = "install")]
     Install {
         #[structopt(help = "Package to install")]
-        package: String
+        package: String,
+
+        #[structopt(long, short, help="Use master branch")]
+        master: bool
     },
     #[structopt(name = "update")]
     Update {},
@@ -138,7 +141,7 @@ fn main(){
     package_db.create_db();
 
     match opt {
-        Gitpack::Install { package } => install(&package, &sources, &cache_dir, &package_db,  false),
+        Gitpack::Install { package, master } => install(&package, &sources, &cache_dir, &package_db,  master),
         Gitpack::Update { } => (),
     }
 }
