@@ -2,8 +2,10 @@ extern crate config;
 use git2::Repository;
 use std::path::PathBuf;
 use structopt::StructOpt;
+use colored::Colorize;
 
 mod db;
+mod print;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -51,7 +53,7 @@ fn checkout_latest(repo: Repository) -> Option<String> {
     match repo.checkout_tree(&spec, Some(&mut checkout_opts)) {
         Ok(a) => a,
         Err(e) => {
-            println!("{}", e);
+            error!("{}", e);
             return None;
         }
     };
@@ -74,7 +76,7 @@ fn install(
 
         if res.status() == 200 {
             found_repo = true;
-            println!("[:] Found the repository at {}", temp_url);
+            info!("Found the repository at {}", temp_url);
 
             let mut path = PathBuf::from(cache_dir);
             path.push(package_name);
@@ -84,7 +86,7 @@ fn install(
                 Err(e) => match e.code() {
                     git2::ErrorCode::Exists => Repository::open(&path).unwrap(),
                     _ => {
-                        eprintln!("[!] Failed to clone the repository");
+                        error!("Failed to clone the repository");
                         std::process::exit(1);
                     }
                 },
@@ -100,7 +102,7 @@ fn install(
                 None => String::from("master"),
             };
 
-            println!("[:] Installing version {}", version);
+            info!("Installing version {}", version);
 
             let _db_package = match database.get(package_name) {
                 Some(package) => package,
@@ -119,7 +121,7 @@ fn install(
         }
     }
     if !found_repo {
-        eprintln!("[!] Failed to fetch the repository :(");
+        error!("Failed to fetch the repository :(");
     }
 }
 
