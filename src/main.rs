@@ -15,7 +15,7 @@ mod error;
     about = "Gitpack v2, written in rust instead of C, package manager."
 )]
 enum Gitpack {
-    #[structopt(name = "install")]
+    #[structopt(name = "install", about = "Install git repository")]
     Install {
         #[structopt(help = "Package to install")]
         package: String,
@@ -23,8 +23,9 @@ enum Gitpack {
         #[structopt(long, short, help = "Use master branch")]
         master: bool,
     },
-    #[structopt(name = "update")]
+    #[structopt(name = "update", about = "Update all packages", )]
     Update {},
+    #[structopt(name = "list", about = "List all packages")]
     List {},
 }
 

@@ -46,7 +46,7 @@ impl<T, E> GPError<T, E> for Result<T, E> {
     fn escape(self, err: &'static str) -> T {
         match self {
             Ok(o) => o,
-            Err(_) => custompanic!("{}", err),
+            Err(_) => custompanic!(err),
         }
     }
 }
