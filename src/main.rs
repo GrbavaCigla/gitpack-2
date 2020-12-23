@@ -1,11 +1,12 @@
 extern crate config;
+use colored::Colorize;
 use git2::Repository;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use colored::Colorize;
+use std::process::exit;
 
 mod db;
-mod print;
+mod error;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -59,6 +60,10 @@ fn checkout_latest(repo: Repository) -> Option<String> {
     };
 
     return Some(String::from(latest));
+}
+
+fn update(cache_dir: &str, database: &db::PackageDB) {
+
 }
 
 fn install(
@@ -153,6 +158,6 @@ fn main() {
         Gitpack::Install { package, master } => {
             install(&package, &sources, &cache_dir, &package_db, master)
         }
-        Gitpack::Update {} => (),
+        Gitpack::Update {} => update(&cache_dir, &package_db),
     }
 }
