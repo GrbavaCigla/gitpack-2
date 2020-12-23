@@ -38,15 +38,15 @@ macro_rules! custompanic {
     };
 }
 
-pub trait GPError<T> {
-    fn escape(&self, err: &'static str) -> &T;
+pub trait GPError<T, E> {
+    fn escape(self, err: &'static str) -> T;
 }
 
-impl<T> GPError<T> for Option<T> {
-    fn escape(&self, err: &'static str) -> &T {
+impl<T, E> GPError<T, E> for Result<T, E> {
+    fn escape(self, err: &'static str) -> T {
         match self {
-            Some(o) => o,
-            None => custompanic!("{}", err),
+            Ok(o) => o,
+            Err(_) => custompanic!("{}", err),
         }
     }
 }

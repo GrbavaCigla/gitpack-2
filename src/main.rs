@@ -3,7 +3,8 @@ use colored::Colorize;
 use git2::Repository;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use std::process::exit;
+
+use crate::error::GPError;
 
 mod db;
 mod error;
@@ -63,7 +64,8 @@ fn checkout_latest(repo: Repository) -> Option<String> {
 }
 
 fn update(cache_dir: &str, database: &db::PackageDB) {
-
+    let _ = cache_dir;
+    let _ = database;
 }
 
 fn install(
@@ -137,19 +139,19 @@ fn main() {
 
     settings
         .merge(config::File::with_name("/etc/gitpack.toml"))
-        .expect("There is no config file at /etc/gitpack.toml.");
+        .escape("There is no config file at /etc/gitpack.toml.");
 
     let sources = settings
         .get_array("sources")
-        .expect("There is no sources in config or sources is not an array.");
+        .escape("There is no sources in config or sources is not an array.");
 
     let db_path = settings
         .get_str("db_path")
-        .expect("There is no db_path in config or db_path is not a string.");
+        .escape("There is no db_path in config or db_path is not a string.");
 
     let cache_dir = settings
         .get_str("cache_dir")
-        .expect("There is no cache_dir in config or cache_dir is not a string");
+        .escape("There is no cache_dir in config or cache_dir is not a string");
 
     let package_db = db::PackageDB::new(PathBuf::from(db_path));
     package_db.create_db();

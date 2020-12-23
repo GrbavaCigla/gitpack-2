@@ -1,5 +1,7 @@
 extern crate rusqlite;
 
+use crate::error::GPError;
+
 use rusqlite::{Connection, params, NO_PARAMS};
 use std::path::PathBuf;
 use std::option::Option;
@@ -20,7 +22,7 @@ pub struct Package {
 impl PackageDB {
     pub fn new(path: PathBuf) -> PackageDB {
         let conn = Connection::open(&path)
-            .expect("Couldn't connect to database. Check the permissions.");
+            .escape("Couldn't connect to database. Check the permissions.");
 
         PackageDB {
             path: path, 
@@ -40,13 +42,13 @@ impl PackageDB {
     pub fn add(&self, pkg: &Package) {
         let _ = self.conn.execute("INSERT INTO Packages \
             (name, url, version) VALUES (?,?,?)", params![pkg.name, pkg.url, pkg.version])
-            .expect("Failed to add package into the database");
+            .escape("Failed to add package into the database");
     }
 
     pub fn get(&self, name: &str) -> Option<Package> {
         let mut pkg_prep = self.conn
             .prepare("SELECT name, url, version FROM Packages WHERE name=?;")
-            .expect("Failed to fetch data from database");
+            .escape("Failed to fetch data from database");
         
         let pkg_iter = pkg_prep.query_map(params![name],
             |row| {
@@ -62,7 +64,7 @@ impl PackageDB {
 
         let mut pkg: Option<Package> = None;
         for package in pkg_iter {
-            pkg = Some(package.expect("Failed to fetch data from database"));
+            pkg = Some(package.escape("Failed to fetch data from database"));
             break;
         }
         
