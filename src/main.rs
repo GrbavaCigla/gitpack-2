@@ -25,6 +25,7 @@ enum Gitpack {
     },
     #[structopt(name = "update")]
     Update {},
+    List {},
 }
 
 fn checkout_latest(repo: Repository) -> Option<String> {
@@ -64,8 +65,16 @@ fn checkout_latest(repo: Repository) -> Option<String> {
 }
 
 fn update(cache_dir: &str, database: &db::PackageDB) {
-    let _ = cache_dir;
-    let _ = database;
+    for pkg in database.list().iter() {
+
+    }
+}
+
+fn list(database: &db::PackageDB) {
+    info!("Fetching list of packages");
+    for pkg in database.list().iter() {
+        println!(" {}-{}", pkg.name.bold(), pkg.version.bold().green());
+    }
 }
 
 fn install(
@@ -161,5 +170,6 @@ fn main() {
             install(&package, &sources, &cache_dir, &package_db, master)
         }
         Gitpack::Update {} => update(&cache_dir, &package_db),
+        Gitpack::List {} => list(&package_db),
     }
 }
