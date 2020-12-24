@@ -1,9 +1,10 @@
 extern crate config;
 use colored::Colorize;
-use git2::Repository;
-use std::path::PathBuf;
+use git2::build::{CheckoutBuilder, RepoBuilder};
+use git2::{FetchOptions, RemoteCallbacks, Repository};
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
-
+use std::process::exit;
 use crate::error::GPError;
 
 mod db;
@@ -19,7 +20,6 @@ enum Gitpack {
     Install {
         #[structopt(help = "Package to install")]
         package: String,
-
         #[structopt(long, short, help = "Use master branch")]
         master: bool,
     },
@@ -29,7 +29,7 @@ enum Gitpack {
     List {},
 }
 
-fn checkout_latest(repo: Repository) -> Option<String> {
+fn checkout_latest(repo: &Repository) -> Option<String> {
     let tags = match repo.tag_names(None) {
         Ok(tags) => tags,
         Err(_) => return None,
@@ -65,9 +65,61 @@ fn checkout_latest(repo: Repository) -> Option<String> {
     return Some(String::from(latest));
 }
 
+fn clone(url:&str, path: &Path, master: bool) -> (Repository, String) {
+    let mut cb = RemoteCallbacks::new();
+    cb.transfer_progress(|stats| {
+        println!("{}/{}", stats.received_objects(), stats.total_objects());
+        true
+    });
+
+    let mut co = CheckoutBuilder::new();
+    co.force().use_theirs(true).progress(|path, cur, total| {
+        println!("{:?} {} {}", path, cur, total)
+    });
+
+    let mut fo = FetchOptions::new();
+    fo.remote_callbacks(cb);
+    let rb = RepoBuilder::new()
+        .fetch_options(fo)
+        .with_checkout(co)
+        .clone(url, path);
+
+
+    let rb = match rb {
+        Ok(repo) => repo,
+        Err(e) => match e.code() {
+            git2::ErrorCode::Exists => Repository::open(path).unwrap(),
+            _ => custompanic!("Failed to clone the repository")
+        },
+    };
+
+
+    let mut latest: Option<String> = None;
+    if !master {
+        latest = checkout_latest(&rb);
+    }
+
+    let version = match latest {
+        Some(ver) => ver,
+        None => String::from("master"),
+    };
+
+    (rb, version)
+}
+
 fn update(cache_dir: &str, database: &db::PackageDB) {
     for pkg in database.list().iter() {
+        let mut path = PathBuf::from(cache_dir);
+        path.push(&pkg.name);
 
+        let mut master = false;
+        if pkg.version == "master" {
+            master = true;
+        }
+
+        info!("Updating package {}", pkg.name);
+        clone(&pkg.url, &path, master);
+        info!("Finished updating package {}", pkg.name);
     }
 }
 
@@ -98,26 +150,7 @@ fn install(
             let mut path = PathBuf::from(cache_dir);
             path.push(package_name);
 
-            let repo = match Repository::clone_recurse(&temp_url, &path) {
-                Ok(repo) => repo,
-                Err(e) => match e.code() {
-                    git2::ErrorCode::Exists => Repository::open(&path).unwrap(),
-                    _ => {
-                        error!("Failed to clone the repository");
-                        std::process::exit(1);
-                    }
-                },
-            };
-
-            let mut latest: Option<String> = None;
-            if !master {
-                latest = checkout_latest(repo);
-            }
-
-            let version = match latest {
-                Some(ver) => ver,
-                None => String::from("master"),
-            };
+            let (_repo, version) = clone(&temp_url, &path, master);
 
             info!("Installing version {}", version);
 
