@@ -1,13 +1,14 @@
 extern crate config;
+use crate::error::GPError;
 use colored::Colorize;
 use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::{FetchOptions, RemoteCallbacks, Repository};
+use std::io::{stdout, Write};
 use std::path::{Path, PathBuf};
-use structopt::StructOpt;
 use std::process::exit;
-use crate::error::GPError;
-extern crate pbr;
-use pbr::ProgressBar;
+use structopt::StructOpt;
+extern crate byte_unit;
+use byte_unit::Byte;
 
 mod db;
 mod error;
@@ -25,7 +26,7 @@ enum Gitpack {
         #[structopt(long, short, help = "Use master branch")]
         master: bool,
     },
-    #[structopt(name = "update", about = "Update all packages", )]
+    #[structopt(name = "update", about = "Update all packages")]
     Update {},
     #[structopt(name = "list", about = "List all packages")]
     List {},
@@ -67,17 +68,47 @@ fn checkout_latest(repo: &Repository) -> Option<String> {
     return Some(String::from(latest));
 }
 
-fn clone(url:&str, path: &Path, master: bool) -> (Repository, String) {
+fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, String) {
     let mut cb = RemoteCallbacks::new();
+
     cb.transfer_progress(|stats| {
-        ProgressBar::new(stats.total_objects() as u64).add(stats.received_objects() as u64);
+        let percent = stats.received_objects() as f32 / stats.total_objects() as f32;
+        let mut label = (percent * 100_f32).round().to_string();
+        label.push('%');
+
+        let width = match term_size::dimensions() {
+            Some(d) => d.0,
+            None => custompanic!("Couldn't find terminal dimensions. This is a bug, report it!"),
+        };
+
+        let storage_size_label = Byte::from_bytes(stats.received_bytes() as u128)
+            .get_appropriate_unit(true)
+            .to_string();
+
+        let chars_avail = width 
+            - label.chars().count()
+            - text.len()
+            - storage_size_label.chars().count() 
+            - 6; // 3 spaces, 2 brackets and 1 '>'
+
+        let chars_count_done = (percent * chars_avail as f32) as usize;
+
+        let done = "=".repeat(chars_count_done);
+        let not_done = "-".repeat(chars_avail - chars_count_done);
+
+        let label = format!(
+            "{} [{}>{}] {} {}",
+            text, done, not_done, label, storage_size_label
+        );
+
+        print!("\r{}", label);
+        stdout().flush();
+
         true
     });
 
     let mut co = CheckoutBuilder::new();
-    co.force().use_theirs(true).progress(|_, cur, total| {
-        ProgressBar::new(total as u64).add(cur as u64);
-    });
+    co.force().use_theirs(true);
 
     let mut fo = FetchOptions::new();
     fo.remote_callbacks(cb);
@@ -86,15 +117,13 @@ fn clone(url:&str, path: &Path, master: bool) -> (Repository, String) {
         .with_checkout(co)
         .clone(url, path);
 
-
     let rb = match rb {
         Ok(repo) => repo,
         Err(e) => match e.code() {
             git2::ErrorCode::Exists => Repository::open(path).unwrap(),
-            _ => custompanic!("Failed to clone the repository")
+            _ => custompanic!("Failed to clone the repository"),
         },
     };
-
 
     let mut latest: Option<String> = None;
     if !master {
@@ -120,7 +149,7 @@ fn update(cache_dir: &str, database: &db::PackageDB) {
         }
 
         info!("Updating package {}", pkg.name);
-        clone(&pkg.url, &path, master);
+        clone(&pkg.url, &path, &pkg.name, master);
         info!("Finished updating package {}", pkg.name);
     }
 }
@@ -152,7 +181,7 @@ fn install(
             let mut path = PathBuf::from(cache_dir);
             path.push(package_name);
 
-            let (_repo, version) = clone(&temp_url, &path, master);
+            let (_repo, version) = clone(&temp_url, &path, package_name, master);
 
             info!("Installing version {}", version);
 
