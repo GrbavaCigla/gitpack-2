@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use std::process::exit;
 use crate::error::GPError;
+extern crate pbr;
+use pbr::ProgressBar;
 
 mod db;
 mod error;
@@ -68,13 +70,13 @@ fn checkout_latest(repo: &Repository) -> Option<String> {
 fn clone(url:&str, path: &Path, master: bool) -> (Repository, String) {
     let mut cb = RemoteCallbacks::new();
     cb.transfer_progress(|stats| {
-        println!("{}/{}", stats.received_objects(), stats.total_objects());
+        ProgressBar::new(stats.total_objects() as u64).add(stats.received_objects() as u64);
         true
     });
 
     let mut co = CheckoutBuilder::new();
-    co.force().use_theirs(true).progress(|path, cur, total| {
-        println!("{:?} {} {}", path, cur, total)
+    co.force().use_theirs(true).progress(|_, cur, total| {
+        ProgressBar::new(total as u64).add(cur as u64);
     });
 
     let mut fo = FetchOptions::new();
