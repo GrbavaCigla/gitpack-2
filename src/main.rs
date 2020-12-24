@@ -102,7 +102,7 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
         );
 
         print!("\r{}", label);
-        stdout().flush();
+        stdout().flush().unwrap();
 
         true
     });
