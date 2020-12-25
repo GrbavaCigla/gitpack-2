@@ -1,5 +1,6 @@
 extern crate config;
 use crate::error::GPError;
+use build::{check_build_system, run_build_cmd};
 use colored::Colorize;
 use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::{FetchOptions, RemoteCallbacks, Repository};
@@ -12,6 +13,7 @@ use byte_unit::Byte;
 
 mod db;
 mod error;
+mod build;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -28,8 +30,15 @@ enum Gitpack {
     },
     #[structopt(name = "update", about = "Update all packages")]
     Update {},
+    
     #[structopt(name = "list", about = "List all packages")]
     List {},
+
+    #[structopt(name = "build", about = "Build package")]
+    Build {
+        #[structopt(help = "Package to build")]
+        package: String,
+    }
 }
 
 fn checkout_latest(repo: &Repository) -> Option<String> {
@@ -85,11 +94,9 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
             .get_appropriate_unit(true)
             .to_string();
 
-        let chars_avail = width 
-            - label.chars().count()
-            - text.len()
-            - storage_size_label.chars().count() 
-            - 6; // 3 spaces, 2 brackets and 1 '>'
+        let chars_avail =
+            width - label.chars().count() - text.len() - storage_size_label.chars().count() - 6; 
+            // 6 = 3 spaces, 2 brackets and 1 '>'
 
         let chars_count_done = (percent * chars_avail as f32) as usize;
 
@@ -97,8 +104,15 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
         let not_done = "-".repeat(chars_avail - chars_count_done);
 
         let label = format!(
-            "{} [{}>{}] {} {}",
-            text, done, not_done, label, storage_size_label
+            "{} {}{}{}{}{} {} {}",
+            text.bold().green(),
+            "[".bold(),
+            done.bold(),
+            ">".bold(),
+            not_done.bold(),
+            "]".bold(),
+            label.bold(),
+            storage_size_label.bold()
         );
 
         print!("\r{}", label);
@@ -136,6 +150,28 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
     };
 
     (rb, version)
+}
+
+fn build(package_name: &str, cache_dir: &str) {
+    let mut path = PathBuf::from(cache_dir);
+    path.push(Path::new(package_name));
+
+    if !path.exists() {
+        error!("Path for package cache doesn't exist");
+        return;
+    }
+    
+    let build_system = match check_build_system(&path) {
+        Some(bs) => bs,
+        None => {
+            error!("Failed to detect build system");
+            return;
+        }
+    };
+
+    info!("Building package with {:?}", build_system);
+
+    run_build_cmd(&path, build_system);
 }
 
 fn update(cache_dir: &str, database: &db::PackageDB) {
@@ -236,5 +272,6 @@ fn main() {
         }
         Gitpack::Update {} => update(&cache_dir, &package_db),
         Gitpack::List {} => list(&package_db),
+        Gitpack::Build {package} => build(&package, &cache_dir),
     }
 }
