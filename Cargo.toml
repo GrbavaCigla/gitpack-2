@@ -1,5 +1,5 @@
 [package]
-name = "gitpack-2"
+name = "gitpack"
 version = "0.1.0"
 authors = ["GrbavaCigla <alexa.ognjanovic@protonmail.com>"]
 edition = "2018"

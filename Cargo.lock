@@ -279,7 +279,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gitpack-2"
+name = "gitpack"
 version = "0.1.0"
 dependencies = [
  "byte-unit",
