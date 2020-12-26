@@ -216,7 +216,7 @@ fn update(cache_dir: &str, database: &db::PackageDB) {
 fn list(database: &db::PackageDB) {
     info!("Fetching list of packages");
     for pkg in database.list().iter() {
-        println!(" {}-{}", pkg.name.bold(), pkg.version.bold().green());
+        println!(" {}-{}", pkg.name.bold().green(), pkg.version.bold());
     }
 }
 
@@ -263,7 +263,7 @@ fn install(
         }
     }
     if !found_repo {
-        error!("Failed to fetch the repository :(");
+        error!("Failed to fetch the repository");
     }
 }
 
