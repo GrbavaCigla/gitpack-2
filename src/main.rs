@@ -8,6 +8,7 @@ use std::io::{stdout, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use structopt::StructOpt;
+use std::fs::remove_dir_all;
 extern crate byte_unit;
 use byte_unit::Byte;
 
@@ -202,9 +203,13 @@ fn update(cache_dir: &str, database: &db::PackageDB) {
             master = true;
         }
 
-        info!("Updating package {}", pkg.name);
+        match remove_dir_all(&path) {
+            Ok(_) => (),
+            Err(_) => error!("Failed to update package {}", pkg.name)
+        };
+
         clone(&pkg.url, &path, &pkg.name, master);
-        info!("Finished updating package {}", pkg.name);
+        println!();
     }
 }
 
