@@ -138,6 +138,13 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
         },
     };
 
+    for i in rb.submodules().escape("Failed to get list of submodules").iter_mut() {
+        match i.update(true, None) {
+            Ok(_) => (),
+            Err(_) => error!("Failed to pull submodule")
+        };
+    }
+
     let mut latest: Option<String> = None;
     if !master {
         latest = checkout_latest(&rb);
@@ -170,18 +177,19 @@ fn build(package_name: &str, cache_dir: &str) {
     info!("Building package with {:?}", build_system);
 
     let output = run_build_cmd(&path, build_system).escape("Failed to build the package");
-    // TODO: Log this
 
-    match output.status.code() {
-        Some(ec) => {
-            if ec == 0 {
+    match output {
+        Some(op) => {
+            if op.status.success() {
                 info!("Build ran successfully");
             } else {
-                error!("Build exited with code 1")
+                error!("Build failed");
             }
-        }
-        None => error!("Failed to get status code of the build process"),
+        },
+        None => error!("No build script for this build system")
     };
+
+    
 }
 
 fn update(cache_dir: &str, database: &db::PackageDB) {

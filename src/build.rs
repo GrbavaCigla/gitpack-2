@@ -40,18 +40,34 @@ pub fn check_build_system<P: AsRef<Path>>(path: &P) -> Option<BuildSystem> {
     None
 }
 
-pub fn run_build_cmd<P: AsRef<Path>>(path: &P, bs: BuildSystem) -> Result<Output, Box<dyn Error>> {
-    let command = match bs {
-        BuildSystem::CMake => "cmake . && make",
-        BuildSystem::Make => "make",
-        BuildSystem::Meson => "meson . && ninja",
-        BuildSystem::Cargo => "cargo build",
-        BuildSystem::Pipfile => "",
-        BuildSystem::Setup => "pip install .",
+fn run_command(cmd: &str) -> Result<Output, std::io::Error>{
+    let cmds_args: Vec<&str> = cmd.split(" ").collect();
+
+    let command = cmds_args[0];
+    let args = &cmds_args[1..];
+
+    let output = Command::new(command).args(args).output();
+
+    output
+}
+
+pub fn run_build_cmd<P: AsRef<Path>>(path: &P, bs: BuildSystem) -> Result<Option<Output>, Box<dyn Error>> {
+    let commands = match bs {
+        BuildSystem::CMake => vec!["cmake .", "make"],
+        BuildSystem::Make => vec!["make"],
+        BuildSystem::Meson => vec!["meson .", "ninja"],
+        BuildSystem::Cargo => vec!["cargo build"],
+        BuildSystem::Pipfile => vec![""],
+        BuildSystem::Setup => vec!["python setup.py sdist bdist_wheel"]
     };
 
     set_current_dir(&path)?;
-    let output = Command::new(command).output()?;
+
+
+    let mut output = None;
+    for command in commands.iter() {
+        output = Some(run_command(command)?);
+    }
 
     Ok(output)
 }
