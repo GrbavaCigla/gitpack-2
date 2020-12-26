@@ -1,7 +1,7 @@
-use std::path::{Path};
-use std::process::Command;
 use std::env::set_current_dir;
-use crate::{error::GPError, info};
+use std::error::Error;
+use std::path::Path;
+use std::process::{Command, Output};
 
 #[derive(Debug)]
 pub enum BuildSystem {
@@ -13,7 +13,7 @@ pub enum BuildSystem {
     Cargo,
 }
 
-pub fn check_build_system<P: AsRef<Path>>(path: &P) -> Option<BuildSystem>{
+pub fn check_build_system<P: AsRef<Path>>(path: &P) -> Option<BuildSystem> {
     let path = path.as_ref();
 
     let cmake_file = path.join("CMakeLists.txt").exists();
@@ -40,16 +40,18 @@ pub fn check_build_system<P: AsRef<Path>>(path: &P) -> Option<BuildSystem>{
     None
 }
 
-pub fn run_build_cmd<P: AsRef<Path>>(path: &P, bs: BuildSystem) {
+pub fn run_build_cmd<P: AsRef<Path>>(path: &P, bs: BuildSystem) -> Result<Output, Box<dyn Error>> {
     let command = match bs {
         BuildSystem::CMake => "cmake . && make",
         BuildSystem::Make => "make",
         BuildSystem::Meson => "meson . && ninja",
         BuildSystem::Cargo => "cargo build",
         BuildSystem::Pipfile => "",
-        BuildSystem::Setup => "pip install ."
+        BuildSystem::Setup => "pip install .",
     };
 
-    set_current_dir(&path).escape("Failed to chdir to package directory");
-    Command::new(command).spawn().escape("Failed to run build command");
+    set_current_dir(&path)?;
+    let output = Command::new(command).output()?;
+
+    Ok(output)
 }

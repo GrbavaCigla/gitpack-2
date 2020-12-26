@@ -11,9 +11,9 @@ use structopt::StructOpt;
 extern crate byte_unit;
 use byte_unit::Byte;
 
+mod build;
 mod db;
 mod error;
-mod build;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -30,7 +30,6 @@ enum Gitpack {
     },
     #[structopt(name = "update", about = "Update all packages")]
     Update {},
-    
     #[structopt(name = "list", about = "List all packages")]
     List {},
 
@@ -38,7 +37,7 @@ enum Gitpack {
     Build {
         #[structopt(help = "Package to build")]
         package: String,
-    }
+    },
 }
 
 fn checkout_latest(repo: &Repository) -> Option<String> {
@@ -95,8 +94,8 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
             .to_string();
 
         let chars_avail =
-            width - label.chars().count() - text.len() - storage_size_label.chars().count() - 6; 
-            // 6 = 3 spaces, 2 brackets and 1 '>'
+            width - label.chars().count() - text.len() - storage_size_label.chars().count() - 6;
+        // 6 = 3 spaces, 2 brackets and 1 '>'
 
         let chars_count_done = (percent * chars_avail as f32) as usize;
 
@@ -160,7 +159,6 @@ fn build(package_name: &str, cache_dir: &str) {
         error!("Path for package cache doesn't exist");
         return;
     }
-    
     let build_system = match check_build_system(&path) {
         Some(bs) => bs,
         None => {
@@ -171,7 +169,19 @@ fn build(package_name: &str, cache_dir: &str) {
 
     info!("Building package with {:?}", build_system);
 
-    run_build_cmd(&path, build_system);
+    let output = run_build_cmd(&path, build_system).escape("Failed to build the package");
+    // TODO: Log this
+
+    match output.status.code() {
+        Some(ec) => {
+            if ec == 0 {
+                info!("Build ran successfully");
+            } else {
+                error!("Build exited with code 1")
+            }
+        }
+        None => error!("Failed to get status code of the build process"),
+    };
 }
 
 fn update(cache_dir: &str, database: &db::PackageDB) {
@@ -219,7 +229,7 @@ fn install(
 
             let (_repo, version) = clone(&temp_url, &path, package_name, master);
 
-            info!("Installing version {}", version);
+            info!("Cloning version {}", version);
 
             let _db_package = match database.get(package_name) {
                 Some(package) => package,
@@ -233,6 +243,8 @@ fn install(
                     pkg
                 }
             };
+
+            build(&package_name, &cache_dir);
 
             break;
         }
@@ -272,6 +284,6 @@ fn main() {
         }
         Gitpack::Update {} => update(&cache_dir, &package_db),
         Gitpack::List {} => list(&package_db),
-        Gitpack::Build {package} => build(&package, &cache_dir),
+        Gitpack::Build { package } => build(&package, &cache_dir),
     }
 }
