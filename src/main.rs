@@ -1,6 +1,6 @@
 extern crate config;
 use crate::error::GPError;
-use build::{check_build_system, run_build_cmd};
+use build::{check_build_system, run_build_cmd, run_install_cmd};
 use colored::Colorize;
 use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::{FetchOptions, RemoteCallbacks, Repository};
@@ -189,6 +189,22 @@ fn build(package_name: &str, cache_dir: &str) {
         },
         None => error!("No build script for this build system")
     };
+
+    info!("Installing the package");
+
+    let output = run_install_cmd(&path, build_system).escape("Failed to build the package");
+
+    match output {
+        Some(op) => {
+            if op.status.success() {
+                info!("Install ran successfully");
+            } else {
+                error!("Install failed");
+            }
+        },
+        None => error!("No install script for this build system")
+    };
+
 
     
 }

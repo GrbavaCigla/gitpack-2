@@ -40,7 +40,7 @@ pub fn check_build_system<P: AsRef<Path>>(path: &P) -> Option<BuildSystem> {
     None
 }
 
-fn run_command(cmd: &str) -> Result<Output, std::io::Error>{
+fn run_command(cmd: &str) -> Result<Output, std::io::Error> {
     let cmds_args: Vec<&str> = cmd.split(" ").collect();
 
     let command = cmds_args[0];
@@ -51,18 +51,45 @@ fn run_command(cmd: &str) -> Result<Output, std::io::Error>{
     output
 }
 
-pub fn run_build_cmd<P: AsRef<Path>>(path: &P, bs: BuildSystem) -> Result<Option<Output>, Box<dyn Error>> {
+pub fn run_build_cmd<P: AsRef<Path>>(
+    path: &P,
+    bs: BuildSystem,
+) -> Result<Option<Output>, Box<dyn Error>> {
+
     let commands = match bs {
         BuildSystem::CMake => vec!["cmake .", "make"],
         BuildSystem::Make => vec!["make"],
         BuildSystem::Meson => vec!["meson .", "ninja"],
         BuildSystem::Cargo => vec!["cargo build"],
-        BuildSystem::Pipfile => vec![""],
-        BuildSystem::Setup => vec!["python setup.py sdist bdist_wheel"]
+        BuildSystem::Pipfile => vec![""], // TODO: This command
+        BuildSystem::Setup => vec!["python setup.py sdist bdist_wheel"],
     };
 
     set_current_dir(&path)?;
 
+    let mut output = None;
+    for command in commands.iter() {
+        output = Some(run_command(command)?);
+    }
+
+    Ok(output)
+}
+
+pub fn run_install_cmd<P: AsRef<Path>>(
+    path: &P,
+    bs: BuildSystem,
+) -> Result<Option<Output>, Box<dyn Error>> {
+    
+    let commands = match bs {
+        BuildSystem::CMake => vec!["make install"],
+        BuildSystem::Make => vec!["make install"],
+        BuildSystem::Meson => vec!["ninja install"],
+        BuildSystem::Cargo => vec!["cargo install --path ."],
+        BuildSystem::Pipfile => vec![""],  // TODO: Have to make sure command is right
+        BuildSystem::Setup => vec![""],    // TODO: I have to check exact command
+    };
+
+    set_current_dir(&path)?;
 
     let mut output = None;
     for command in commands.iter() {
