@@ -8,7 +8,8 @@ cache_dir = "/tmp/gitpack" # Debug
 
 temp_dir = "/tmp/"
 
-color = true
+log_path = "/var/log/gitpack.log"
+
 sources = [
     "https://github.com/",
     "https://gitlab.com/",
