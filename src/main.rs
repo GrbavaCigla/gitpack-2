@@ -177,7 +177,7 @@ fn build(package_name: &str, cache_dir: &str) {
 
     info!("Building package with {:?}", build_system);
 
-    let output = run_build_cmd(&path, build_system).escape("Failed to build the package");
+    let output = run_build_cmd(&path, &build_system).escape("Failed to build the package");
 
     match output {
         Some(op) => {
@@ -192,7 +192,7 @@ fn build(package_name: &str, cache_dir: &str) {
 
     info!("Installing the package");
 
-    let output = run_install_cmd(&path, build_system).escape("Failed to build the package");
+    let output = run_install_cmd(&path, &build_system).escape("Failed to build the package");
 
     match output {
         Some(op) => {

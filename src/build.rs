@@ -53,7 +53,7 @@ fn run_command(cmd: &str) -> Result<Output, std::io::Error> {
 
 pub fn run_build_cmd<P: AsRef<Path>>(
     path: &P,
-    bs: BuildSystem,
+    bs: &BuildSystem,
 ) -> Result<Option<Output>, Box<dyn Error>> {
 
     let commands = match bs {
@@ -77,7 +77,7 @@ pub fn run_build_cmd<P: AsRef<Path>>(
 
 pub fn run_install_cmd<P: AsRef<Path>>(
     path: &P,
-    bs: BuildSystem,
+    bs: &BuildSystem,
 ) -> Result<Option<Output>, Box<dyn Error>> {
     
     let commands = match bs {
