@@ -91,7 +91,7 @@ pub fn run_install_cmd<P: AsRef<Path>>(
         BuildSystem::Make => vec!["make install"],
         BuildSystem::Autotools => vec!["make install"],
         BuildSystem::Meson => vec!["ninja install"],
-        BuildSystem::Cargo => vec!["cargo install --path . --release"],
+        BuildSystem::Cargo => vec!["cargo install --path ."],
         BuildSystem::Pipfile => vec![""],  // TODO: Have to make sure command is right
         BuildSystem::Setup => vec!["python setup.py install"],    // TODO: I have to check exact command
     };

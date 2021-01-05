@@ -136,7 +136,7 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
         Ok(repo) => repo,
         Err(e) => match e.code() {
             git2::ErrorCode::Exists => Repository::open(path).unwrap(),
-            _ => custompanic!("Failed to clone the repository"),
+            _ => custompanic!("Failed to clone the repository: {}", e.to_string().to_lowercase()),
         },
     };
 
@@ -147,7 +147,7 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
     {
         match i.update(true, None) {
             Ok(_) => (),
-            Err(_) => error!("Failed to pull submodule"),
+            Err(e) => error!("Failed to pull submodule: {}", e.to_string().to_lowercase()),
         };
     }
 
@@ -229,11 +229,12 @@ fn update(cache_dir: &str, database: &db::PackageDB) {
 
         match remove_dir_all(&path) {
             Ok(_) => (),
-            Err(_) => error!("Failed to update package {}", pkg.name),
+            Err(e) => error!("Failed to update package: {}", e.to_string().to_lowercase()),
         };
 
         clone(&pkg.url, &path, &pkg.name, master);
         println!();
+        build(&pkg.name, cache_dir);
     }
 }
 
