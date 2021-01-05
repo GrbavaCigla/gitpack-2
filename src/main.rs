@@ -4,13 +4,14 @@ use build::{check_build_system, run_build_cmd, run_install_cmd};
 use colored::Colorize;
 use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::{FetchOptions, RemoteCallbacks, Repository};
+use std::fs::remove_dir_all;
 use std::io::{stdout, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use structopt::StructOpt;
-use std::fs::remove_dir_all;
 extern crate byte_unit;
 use byte_unit::Byte;
+use std::str;
 
 mod build;
 mod db;
@@ -139,10 +140,14 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
         },
     };
 
-    for i in rb.submodules().escape("Failed to get list of submodules").iter_mut() {
+    for i in rb
+        .submodules()
+        .escape("Failed to get list of submodules")
+        .iter_mut()
+    {
         match i.update(true, None) {
             Ok(_) => (),
-            Err(_) => error!("Failed to pull submodule")
+            Err(_) => error!("Failed to pull submodule"),
         };
     }
 
@@ -184,10 +189,13 @@ fn build(package_name: &str, cache_dir: &str) {
             if op.status.success() {
                 info!("Build ran successfully");
             } else {
-                custompanic!("Build failed");
+                custompanic!("Build failed, this was printed out during failure:\nSTDIN: \n{} \nSTDERR: \n{}", 
+                    str::from_utf8(&op.stdout).unwrap(), 
+                    str::from_utf8(&op.stderr).unwrap()
+                );
             }
-        },
-        None => custompanic!("No build script for this build system")
+        }
+        None => custompanic!("No build script for this build system"),
     };
 
     info!("Installing the package");
@@ -199,10 +207,13 @@ fn build(package_name: &str, cache_dir: &str) {
             if op.status.success() {
                 info!("Install ran successfully");
             } else {
-                custompanic!("Install failed");
+                custompanic!("Install failed, this was printed out during failure:\nSTDIN: \n{} \nSTDERR: \n{}", 
+                    str::from_utf8(&op.stdout).unwrap(), 
+                    str::from_utf8(&op.stderr).unwrap()
+                );
             }
-        },
-        None => custompanic!("No install script for this build system")
+        }
+        None => custompanic!("No install script for this build system"),
     };
 }
 
@@ -218,7 +229,7 @@ fn update(cache_dir: &str, database: &db::PackageDB) {
 
         match remove_dir_all(&path) {
             Ok(_) => (),
-            Err(_) => error!("Failed to update package {}", pkg.name)
+            Err(_) => error!("Failed to update package {}", pkg.name),
         };
 
         clone(&pkg.url, &path, &pkg.name, master);
