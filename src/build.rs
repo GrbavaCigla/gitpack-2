@@ -65,7 +65,7 @@ pub fn run_build_cmd<P: AsRef<Path>>(
         BuildSystem::CMake => vec!["cmake .", "make"],
         BuildSystem::Make => vec!["make"],
         BuildSystem::Autotools => vec!["./configure", "make"],
-        BuildSystem::Meson => vec!["meson .", "ninja"],
+        BuildSystem::Meson => vec!["mkdir build-gitpack", "meson build-gitpack", "ninja -C build-gitpack"],
         BuildSystem::Cargo => vec!["cargo build --release"],
         BuildSystem::Pipfile => vec![""], // TODO: This command
         BuildSystem::Setup => vec!["python setup.py sdist bdist_wheel"],
@@ -90,7 +90,7 @@ pub fn run_install_cmd<P: AsRef<Path>>(
         BuildSystem::CMake => vec!["make install"],
         BuildSystem::Make => vec!["make install"],
         BuildSystem::Autotools => vec!["make install"],
-        BuildSystem::Meson => vec!["ninja install"],
+        BuildSystem::Meson => vec!["ninja -C build-gitpack install"],
         BuildSystem::Cargo => vec!["cargo install --path ."],
         BuildSystem::Pipfile => vec![""],  // TODO: Have to make sure command is right
         BuildSystem::Setup => vec!["python setup.py install"],    // TODO: I have to check exact command
