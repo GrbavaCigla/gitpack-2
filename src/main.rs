@@ -12,6 +12,8 @@ use structopt::StructOpt;
 extern crate byte_unit;
 use byte_unit::Byte;
 use std::str;
+use reqwest::Url;
+use std::str::FromStr;
 
 mod build;
 mod db;
@@ -29,17 +31,13 @@ enum Gitpack {
         package: String,
         #[structopt(long, short, help = "Use master branch")]
         master: bool,
+        #[structopt(long, short, help = "Use url instead of username/repo")]
+        absolute: bool,
     },
     #[structopt(name = "update", about = "Update all packages")]
     Update {},
     #[structopt(name = "list", about = "List all packages")]
     List {},
-
-    #[structopt(name = "build", about = "Build package")]
-    Build {
-        #[structopt(help = "Package to build")]
-        package: String,
-    },
 }
 
 fn checkout_latest(repo: &Repository) -> Option<String> {
@@ -164,10 +162,7 @@ fn clone(url: &str, path: &Path, text: &str, master: bool) -> (Repository, Strin
     (rb, version)
 }
 
-fn build(package_name: &str, cache_dir: &str) {
-    let mut path = PathBuf::from(cache_dir);
-    path.push(Path::new(package_name));
-
+fn build(path: &Path) {
     if !path.exists() {
         error!("Path for package cache doesn't exist");
         return;
@@ -219,8 +214,13 @@ fn build(package_name: &str, cache_dir: &str) {
 
 fn update(cache_dir: &str, database: &db::PackageDB) {
     for pkg in database.list().iter() {
+        let final_path = match url_to_path(&Url::from_str(&pkg.url).escape("Failed to parse URL")) {
+            Ok(path) => path,
+            Err(e) => custompanic!("Failed to parse url: {}, please make issue on github.", e),
+        };
+
         let mut path = PathBuf::from(cache_dir);
-        path.push(&pkg.name);
+        path.push(&final_path);
 
         let mut master = false;
         if pkg.version == "master" {
@@ -234,7 +234,7 @@ fn update(cache_dir: &str, database: &db::PackageDB) {
 
         clone(&pkg.url, &path, &pkg.name, master);
         println!();
-        build(&pkg.name, cache_dir);
+        build(&path);
     }
 }
 
@@ -245,27 +245,58 @@ fn list(database: &db::PackageDB) {
     }
 }
 
+fn url_to_path(url: &Url) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let mut path = PathBuf::new();
+
+    let ffolder = url.host_str().ok_or("failed to find host of the url")?;
+    path.push(ffolder);
+
+    for segment in url.path_segments().ok_or("Failed to find path of the url")? {
+        path.push(segment);
+    }
+
+    Ok(path)
+}
+
 fn install(
     package_name: &str,
     sources: &Vec<config::Value>,
     cache_dir: &str,
     database: &db::PackageDB,
     master: bool,
+    absolute: bool,
 ) {
-    let mut found_repo = false;
+    let mut final_url: Option<Url> = None;
+    if absolute {
+        final_url = Some(Url::from_str(package_name).escape("Failed to parse URL"));
+    } else {
+        for source in sources {
+            let temp_url = format!("{}{}", source, package_name);
+            let res = reqwest::blocking::get(&temp_url).unwrap();
+    
+            if res.status() == 200 {
+                final_url = Some(Url::from_str(&temp_url).escape("Failed to parse URL"));
 
-    for source in sources {
-        let temp_url = format!("{}{}", source, package_name);
-        let res = reqwest::blocking::get(&temp_url).unwrap();
-
-        if res.status() == 200 {
-            found_repo = true;
-            info!("Found the repository at {}", temp_url);
-
+                info!("Found the repository at {}", temp_url);
+                break;
+            }
+        }
+    }
+    
+    match final_url {
+        Some(final_url) => {
             let mut path = PathBuf::from(cache_dir);
-            path.push(package_name);
 
-            let (_repo, version) = clone(&temp_url, &path, package_name, master);
+            let final_path = match url_to_path(&final_url) {
+                Ok(path) => path,
+                Err(e) => custompanic!("Failed to parse url: {}, please make issue on github.", e),
+            };
+
+            let final_url_str = final_url.as_str().to_owned();
+
+            path.push(final_path);
+
+            let (_repo, version) = clone(&final_url_str, &path, package_name, master);
 
             info!("Cloning version {}", version);
 
@@ -274,7 +305,7 @@ fn install(
                 None => {
                     let pkg = db::Package {
                         name: String::from(package_name),
-                        url: temp_url,
+                        url: final_url_str,
                         version: version,
                     };
                     database.add(&pkg);
@@ -282,14 +313,10 @@ fn install(
                 }
             };
 
-            build(&package_name, &cache_dir);
-
-            break;
+            build(&path);
         }
-    }
-    if !found_repo {
-        error!("Failed to fetch the repository");
-    }
+        None => error!("Failed to fetch the repository")
+    };
 }
 
 fn main() {
@@ -317,11 +344,10 @@ fn main() {
     package_db.create_db();
 
     match opt {
-        Gitpack::Install { package, master } => {
-            install(&package, &sources, &cache_dir, &package_db, master)
+        Gitpack::Install { package, master, absolute } => {
+            install(&package, &sources, &cache_dir, &package_db, master, absolute)
         }
         Gitpack::Update {} => update(&cache_dir, &package_db),
         Gitpack::List {} => list(&package_db),
-        Gitpack::Build { package } => build(&package, &cache_dir),
     }
 }
