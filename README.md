@@ -12,6 +12,7 @@ strip target/release/gitpack
 doas/sudo cp target/release/gitpack /usr/bin/
 doas/sudo cp res/config.toml /etc/gitpack.toml
 ```
+_**NOTE: please edit configuration file. Current configuration is for debugging and uses /tmp instead of real paths.**_
 
 ## Usage
 ```
