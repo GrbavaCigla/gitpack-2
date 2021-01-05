@@ -7,6 +7,7 @@ use std::process::{Command, Output};
 pub enum BuildSystem {
     CMake,
     Make,
+    Autotools,
     Meson,
     Setup,
     Pipfile,
@@ -18,13 +19,17 @@ pub fn check_build_system<P: AsRef<Path>>(path: &P) -> Option<BuildSystem> {
 
     let cmake_file = path.join("CMakeLists.txt").exists();
     let make_file = path.join("Makefile").exists();
+    let autotools_file = path.join("configure").exists();
     let meson_file = path.join("meson_options.txt").exists();
     let pip_file = path.join("Pipfile").exists();
     let setup_file = path.join("setup.py").exists();
     let cargo_file = path.join("Cargo.toml").exists();
+    
 
     if make_file {
         return Some(BuildSystem::Make);
+    } else if autotools_file {
+        return Some(BuildSystem::Autotools);
     } else if cmake_file {
         return Some(BuildSystem::CMake);
     } else if meson_file {
@@ -59,8 +64,9 @@ pub fn run_build_cmd<P: AsRef<Path>>(
     let commands = match bs {
         BuildSystem::CMake => vec!["cmake .", "make"],
         BuildSystem::Make => vec!["make"],
+        BuildSystem::Autotools => vec!["./configure", "make"],
         BuildSystem::Meson => vec!["meson .", "ninja"],
-        BuildSystem::Cargo => vec!["cargo build"],
+        BuildSystem::Cargo => vec!["cargo build --release"],
         BuildSystem::Pipfile => vec![""], // TODO: This command
         BuildSystem::Setup => vec!["python setup.py sdist bdist_wheel"],
     };
@@ -83,10 +89,11 @@ pub fn run_install_cmd<P: AsRef<Path>>(
     let commands = match bs {
         BuildSystem::CMake => vec!["make install"],
         BuildSystem::Make => vec!["make install"],
+        BuildSystem::Autotools => vec!["make install"],
         BuildSystem::Meson => vec!["ninja install"],
-        BuildSystem::Cargo => vec!["cargo install --path ."],
+        BuildSystem::Cargo => vec!["cargo install --path . --release"],
         BuildSystem::Pipfile => vec![""],  // TODO: Have to make sure command is right
-        BuildSystem::Setup => vec![""],    // TODO: I have to check exact command
+        BuildSystem::Setup => vec!["python setup.py install"],    // TODO: I have to check exact command
     };
 
     set_current_dir(&path)?;

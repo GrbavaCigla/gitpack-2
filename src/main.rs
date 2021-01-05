@@ -184,10 +184,10 @@ fn build(package_name: &str, cache_dir: &str) {
             if op.status.success() {
                 info!("Build ran successfully");
             } else {
-                error!("Build failed");
+                custompanic!("Build failed");
             }
         },
-        None => error!("No build script for this build system")
+        None => custompanic!("No build script for this build system")
     };
 
     info!("Installing the package");
@@ -199,14 +199,11 @@ fn build(package_name: &str, cache_dir: &str) {
             if op.status.success() {
                 info!("Install ran successfully");
             } else {
-                error!("Install failed");
+                custompanic!("Install failed");
             }
         },
-        None => error!("No install script for this build system")
+        None => custompanic!("No install script for this build system")
     };
-
-
-    
 }
 
 fn update(cache_dir: &str, database: &db::PackageDB) {
