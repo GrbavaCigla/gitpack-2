@@ -3,7 +3,7 @@ use std::error::Error;
 use std::path::Path;
 use std::process::{Command, Output};
 
-#[derive(Debug)]
+#[derive(Debug,Copy,Clone)]
 pub enum BuildSystem {
     CMake,
     Make,
